@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soccer-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: soccer-api
+  template:
+    metadata:
+      labels:
+        app: soccer-api
+    spec:
+      containers:
+        - name: soccer-api
+          image: soccer-devops-project-soccer-api:latest
+            #imagePullPolicy: Never   # Important! Use local Docker image
+          ports:
+            - containerPort: 8000
+
