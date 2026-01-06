@@ -2,36 +2,33 @@ name: CI/CD – Build and Deploy to DigitalOcean Kubernetes
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GHCR
         run: |
-          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build Docker image
-        run: |
-          docker build -t ghcr.io/10peter/soccer-api:latest .
+        run: docker build -t ghcr.io/10peter/soccer-api:latest .
 
       - name: Push Docker image
-        run: |
-          docker push ghcr.io/10peter/soccer-api:latest
+        run: docker push ghcr.io/10peter/soccer-api:latest
 
-      - name: Set up kubeconfig for DigitalOcean
+      - name: Set up kubeconfig
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
-          kubectl config get-contexts
 
-      - name: Deploy to Kubernetes
+      - name: Deploy
         run: |
           export KUBECONFIG=$PWD/kubeconfig
           kubectl apply -f deployment.yaml
