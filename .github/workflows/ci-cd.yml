@@ -1,4 +1,4 @@
-name: CI-CD Soccer API
+name: CI/CD – Build and Deploy to DigitalOcean Kubernetes
 
 on:
   push:
@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-      - name: Log in to GHCR
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
       - name: Build Docker image
         run: |
@@ -24,13 +25,16 @@ jobs:
         run: |
           docker push ghcr.io/10peter/soccer-api:latest
 
-      - name: Set up kubectl
+      - name: Set up kubeconfig for DigitalOcean
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+          kubectl config get-contexts
 
       - name: Deploy to Kubernetes
         run: |
+          export KUBECONFIG=$PWD/kubeconfig
           kubectl apply -f deployment.yaml
-          kubectl rollout restart deployment soccer-api-deployment
+          kubectl apply -f service.yaml
+          kubectl apply -f ingress.yaml
 
