@@ -2,7 +2,7 @@ name: CI/CD – Build and Deploy to DigitalOcean Kubernetes
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -11,27 +11,36 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry (GHCR)
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build Docker image
-        run: docker build -t ghcr.io/10peter/soccer-api:latest .
+        run: |
+          docker build -t ghcr.io/10peter/soccer-devops-project/soccer-api:latest .
 
       - name: Push Docker image
-        run: docker push ghcr.io/10peter/soccer-api:latest
+        run: |
+          docker push ghcr.io/10peter/soccer-devops-project/soccer-api:latest
 
-      - name: Set up kubeconfig
+      - name: Set up kubeconfig for DigitalOcean
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig
 
-      - name: Deploy
+      - name: Deploy to Kubernetes
         run: |
           export KUBECONFIG=$PWD/kubeconfig
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
           kubectl apply -f ingress.yaml
+
+      - name: Rollout status
+        run: |
+          export KUBECONFIG=$PWD/kubeconfig
+          kubectl rollout status deployment/soccer-api-deployment -n soccer --timeout=180s
 
