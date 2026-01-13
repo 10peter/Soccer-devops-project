@@ -11,3 +11,7 @@ app.include_router(api_router)
 def root():
     return {"message": "Soccer API is running. Visit /docs for Swagger UI"}
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
