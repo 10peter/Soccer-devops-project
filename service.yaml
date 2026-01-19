@@ -2,13 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: soccer-api-service
+  namespace: soccer
+  labels:
+    app: soccer-api
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: soccer-api
   ports:
-    - protocol: TCP
-      port: 8000
+    - name: http
+      port: 80
       targetPort: 8000
-      nodePort: 30080
 
