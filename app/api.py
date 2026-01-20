@@ -5,10 +5,12 @@ router = APIRouter()
 
 from datetime import date, timedelta
 
+from datetime import datetime
+
 @router.get("/fixtures")
 def get_fixtures(
-    league: int,
-    season: int = 2024,
+    league: int = 39,
+    season: int = None,
     next: int = 10,
     today: bool = False,
     live: bool = False,
@@ -16,43 +18,46 @@ def get_fixtures(
     to_date: str = None
 ):
     """
-    Current fixtures endpoint (real value):
-    - today=true -> matches today
-    - live=true -> live matches
-    - from_date & to_date -> fixtures within a date range (YYYY-MM-DD)
-    - otherwise -> next N upcoming fixtures
+    Current fixtures endpoint supports:
+    - /fixtures?league=39&today=true
+    - /fixtures?league=39&live=true
+    - /fixtures?league=39&from_date=YYYY-MM-DD&to_date=YYYY-MM-DD
+    - /fixtures?league=39&next=10
     """
 
     try:
+        # Auto season if not provided
+        if season is None:
+            now = datetime.utcnow()
+            season = now.year if now.month >= 8 else now.year - 1
+
         params = {"league": league, "season": season}
 
-        # 1) Live fixtures
+        # Live fixtures
         if live:
             params = {"live": "all", "league": league}
 
-        # 2) Today's fixtures
+        # Today's fixtures
         elif today:
-            params["date"] = date.today().isoformat()
+            params["date"] = datetime.utcnow().date().isoformat()
 
-        # 3) Date range fixtures (this week, custom range)
+        # Date range fixtures
         elif from_date and to_date:
             params["from"] = from_date
             params["to"] = to_date
 
-        # 4) Default: next upcoming fixtures
+        # Default next fixtures
         else:
             params["next"] = next
 
         raw = fetch_from_api("/fixtures", params)
-
         fixtures = raw.get("response", [])
-        simplified = [simplify_fixture(f) for f in fixtures]
 
-        league_name = simplified[0]["league"] if simplified else "Unknown"
+        simplified = [simplify_fixture(f) for f in fixtures]
 
         return {
             "mode": "live" if live else "today" if today else "range" if (from_date and to_date) else "next",
-            "league": league_name,
+            "league": league,
             "season": season,
             "count": len(simplified),
             "fixtures": simplified
@@ -60,6 +65,7 @@ def get_fixtures(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.get("/standings")
